@@ -1,9 +1,8 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, FileResponse
-from fastapi.responses import FileResponse
 
 import numpy as np
-from PIL import Image
+import io
 
 # ------------------------------------------------------------------------------
 
@@ -28,7 +27,7 @@ def preprocess_image(file: UploadFile):
     """
     pass
 
-@app.post("/predict")
+@app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
     """
     Endpoint principal : reçoit une image, retourne un masque simulé.
@@ -37,12 +36,14 @@ async def predict(file: UploadFile = File(...)):
     print(f"Image reçue : {file.filename} — type : {file.content_type}")
 
     # Traitement image
-    image = preprocess_image(file)
+    preprocessed_img = preprocess_image(file)
 
-    mask_path = "tests/test_mask.png"  # Le masque simulé
+    # Le masque simulé
+    mask_path = "tests/test_mask.npy"
+    one_hot_mask = np.load(mask_path)
 
-    mask = Image.open(mask_path).resize((img_width, img_height))
-    mask = np.array(mask).astype(np.uint8)
+    # Transformer en classes
+    mask_argmax = np.argmax(one_hot_mask, axis=-1)
 
     # Retour au format JSON-compatible
-    return JSONResponse(content={"mask": mask.tolist()})
+    return JSONResponse(content={"mask": mask_argmax.tolist()})
